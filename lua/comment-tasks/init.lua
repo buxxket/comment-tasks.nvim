@@ -134,10 +134,11 @@ function M.create_task_from_comment(lang_override, provider_name)
     end
 
     -- Extract content from the comment
-    local comment_content = detection.extract_comment_content(comment_info, current_config.comment_prefixes)
     local comment_lines = detection.extract_comment_lines(comment_info, current_config.comment_prefixes)
+    local comment_content = detection.extract_comment_content(comment_info, current_config.comment_prefixes)
+    local comment_title = comment_lines[1] or comment_content
 
-    if comment_content == "" then
+    if comment_title == "" then
         utils.notify_warn("Comment is empty", provider_name)
         return
     end
@@ -155,7 +156,7 @@ function M.create_task_from_comment(lang_override, provider_name)
         end
     end
 
-    show_task_dialog_for_block(comment_content, comment_info, filename, provider_name, current_config, extra_details)
+    show_task_dialog_for_block(comment_title, comment_info, filename, provider_name, current_config, extra_details)
 end
 
 function M.update_task_status_from_comment(status, lang_override, _)
