@@ -205,6 +205,113 @@ describe("comment-tasks Trello provider defaults", function()
         assert.is_not_nil(card_body:match("due="))
     end)
 
+    it("matches label names case-insensitively and with trimmed whitespace", function()
+        local card_body = nil
+
+        local provider = create_provider({
+            enabled = true,
+            board_id = "board_123",
+            statuses = { new = "To Do" },
+            default_label_names = { "  backend api  " },
+            default_due_in_days = 0,
+        }, function(opts)
+            if opts.url:match("/boards/board_123/lists") then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ { id = "64f000000000000000000001", name = "To Do" } }),
+                })
+                return
+            end
+
+            if opts.url:match("/boards/board_123/labels") and opts.method == "get" then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ { id = "64f0000000000000000000aa", name = "BackEnd   API" } }),
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards$") and opts.method == "post" then
+                card_body = opts.body
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({
+                        id = "card_5",
+                        shortUrl = "https://trello.com/c/card_5",
+                    }),
+                })
+                return
+            end
+
+            error("Unexpected request: " .. opts.method .. " " .. opts.url)
+        end, "/tmp/repo-test")
+
+        provider:create_task("Normalized label card", "file.lua", function(_url, err)
+            assert.is_nil(err)
+        end)
+
+        assert.is_not_nil(card_body)
+        assert.is_not_nil(card_body:match("idLabels=64f0000000000000000000aa"))
+        assert.is_nil(card_body:match("due="))
+    end)
+
+    it("accepts 201 label create response and applies created label", function()
+        local card_body = nil
+
+        local provider = create_provider({
+            enabled = true,
+            board_id = "board_123",
+            statuses = { new = "To Do" },
+            default_label_names = { "backend" },
+            auto_create_labels = true,
+        }, function(opts)
+            if opts.url:match("/boards/board_123/lists") then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ { id = "64f000000000000000000001", name = "To Do" } }),
+                })
+                return
+            end
+
+            if opts.url:match("/boards/board_123/labels") and opts.method == "get" then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({}),
+                })
+                return
+            end
+
+            if opts.url:match("/1/labels$") and opts.method == "post" then
+                opts.callback({
+                    status = 201,
+                    body = vim.fn.json_encode({ id = "64f0000000000000000000bb" }),
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards$") and opts.method == "post" then
+                card_body = opts.body
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({
+                        id = "card_6",
+                        shortUrl = "https://trello.com/c/card_6",
+                    }),
+                })
+                return
+            end
+
+            error("Unexpected request: " .. opts.method .. " " .. opts.url)
+        end, "/tmp/repo-test")
+
+        provider:create_task("Create label 201", "file.lua", function(_url, err)
+            assert.is_nil(err)
+        end)
+
+        assert.is_not_nil(card_body)
+        assert.is_not_nil(card_body:match("idLabels=64f0000000000000000000bb"))
+    end)
+
     it("continues card creation when label auto-creation fails", function()
         local card_body = nil
 
@@ -264,5 +371,49 @@ describe("comment-tasks Trello provider defaults", function()
         assert.equals("https://trello.com/c/card_4", card_url)
         assert.is_not_nil(card_body)
         assert.is_nil(card_body:match("idLabels="))
+    end)
+
+    it("adds extra TODO description lines into Trello card description", function()
+        local card_body = nil
+
+        local provider = create_provider({
+            enabled = true,
+            board_id = "board_123",
+            statuses = { new = "To Do" },
+        }, function(opts)
+            if opts.url:match("/boards/board_123/lists") then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ { id = "64f000000000000000000001", name = "To Do" } }),
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards$") and opts.method == "post" then
+                card_body = opts.body
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({
+                        id = "card_7",
+                        shortUrl = "https://trello.com/c/card_7",
+                    }),
+                })
+                return
+            end
+
+            error("Unexpected request: " .. opts.method .. " " .. opts.url)
+        end, "/tmp/repo-test")
+
+        provider:create_task("Lifetime total site revenue", "pricing.py", function(_url, err)
+            assert.is_nil(err)
+        end, {
+            comment_details = {
+                "A combined total cost from all historically selected tariffs should be shown in the lifetime total site revenue",
+            },
+        })
+
+        assert.is_not_nil(card_body)
+        assert.is_not_nil(card_body:match("Details%%3A"))
+        assert.is_not_nil(card_body:match("combined%%20total%%20cost"))
     end)
 end)

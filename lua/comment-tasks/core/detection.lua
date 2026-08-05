@@ -382,6 +382,42 @@ function M.extract_comment_content(comment_info, comment_prefixes)
     return table.concat(content_parts, " "):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+-- Extract comment content as individual logical lines when possible.
+-- For single-line comment styles this preserves line boundaries, while
+-- block comments fall back to a single extracted content string.
+function M.extract_comment_lines(comment_info, comment_prefixes)
+    if not comment_info or not comment_info.is_comment then
+        return {}
+    end
+
+    local style_config = comment_info.lang_config.comment_styles[comment_info.style_type]
+    if not style_config then
+        return {}
+    end
+
+    local lines = {}
+
+    if style_config.prefix then
+        local prefix_pattern = "^%s*" .. vim.pesc(style_config.prefix) .. "(.*)"
+        for _, line in ipairs(comment_info.lines) do
+            local content = line:match(prefix_pattern)
+            if content then
+                content = utils.trim_comment_prefixes(content, comment_prefixes)
+                if content and content ~= "" then
+                    table.insert(lines, content)
+                end
+            end
+        end
+        return lines
+    end
+
+    local content = M.extract_comment_content(comment_info, comment_prefixes)
+    if content ~= "" then
+        table.insert(lines, content)
+    end
+    return lines
+end
+
 -- Extend comment with URL
 function M.extend_comment_with_url(comment_info, task_url)
     if not comment_info or not comment_info.is_comment then

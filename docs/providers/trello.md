@@ -198,7 +198,7 @@ trello = {
 - `add_repo_label`: Uses the git repository root folder name as a label (falls back to project root/cwd if git root is unavailable).
 - `default_label_color`: Label color for labels created automatically (`blue`, `green`, `red`, etc.).
 - `card_position`: Sets Trello card position (`top`, `bottom`, or numeric string).
-- `default_due_in_days`: Sets a due date offset for new cards.
+- `default_due_in_days`: Sets a due date offset for new cards. Use `0` (or `nil`) to disable due dates.
 
 ## Troubleshooting
 

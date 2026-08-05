@@ -140,7 +140,7 @@ M.default_config = {
             auto_create_labels = true, -- Optional: create missing configured labels on board
             default_label_color = "blue", -- Color for auto-created labels
             card_position = nil, -- Optional: "top", "bottom", or numeric position
-            default_due_in_days = nil, -- Optional: due date offset in days for new cards
+            default_due_in_days = nil, -- Optional: due date offset in days for new cards (0 disables)
             -- Trello uses lists as statuses
             statuses = {
                 new = "To Do",        -- Special: List for new cards (creates cards)

@@ -30,6 +30,15 @@ local function trim_string(value)
 	return trimmed
 end
 
+local function normalize_label_name(value)
+	local trimmed = trim_string(value)
+	if not trimmed then
+		return nil
+	end
+	-- Normalize whitespace + case so config names match Trello names reliably.
+	return trimmed:lower():gsub("%s+", " ")
+end
+
 local function parse_config_values(values)
 	if values == nil then
 		return {}
@@ -274,7 +283,7 @@ function TrelloProvider:create_label(board_id, label_name, color, api_key, api_t
 		body = params_string,
 		callback = function(result)
 			vim.schedule(function()
-				if result.status ~= 200 then
+				if result.status < 200 or result.status >= 300 then
 					callback(nil, "Failed to create label: " .. label_name)
 					return
 				end
@@ -340,14 +349,17 @@ function TrelloProvider:resolve_label_ids(api_key, api_token, callback)
 
 				local labels_by_name = {}
 				for _, label in ipairs(labels_data) do
-					if label and type(label) == "table" and label.id and label.name and label.name ~= "" then
-						labels_by_name[label.name:lower()] = label.id
+					if label and type(label) == "table" and label.id then
+						local normalized_name = normalize_label_name(label.name)
+						if normalized_name then
+							labels_by_name[normalized_name] = label.id
+						end
 					end
 				end
 
 				local missing_labels = {}
 				for _, label_name in ipairs(label_names) do
-					local found_id = labels_by_name[label_name:lower()]
+					local found_id = labels_by_name[normalize_label_name(label_name)]
 					if found_id then
 						add_unique(label_ids, found_id)
 					else
@@ -446,7 +458,7 @@ function TrelloProvider:resolve_card_defaults(api_key, api_token, callback)
 		defaults.pos = self.config.card_position
 	end
 
-	if type(self.config.default_due_in_days) == "number" and self.config.default_due_in_days >= 0 then
+	if type(self.config.default_due_in_days) == "number" and self.config.default_due_in_days > 0 then
 		local now = os.time()
 		local due_at = now + math.floor(self.config.default_due_in_days * 86400)
 		defaults.due = os.date("!%Y-%m-%dT%H:%M:%SZ", due_at)
@@ -456,7 +468,7 @@ function TrelloProvider:resolve_card_defaults(api_key, api_token, callback)
 end
 
 --- Create a new Trello card
-function TrelloProvider:create_task(task_name, filename, callback)
+function TrelloProvider:create_task(task_name, filename, callback, options)
 	local api_key, error = self:get_api_key()
 	if not api_key then
 		callback(nil, error)
@@ -478,6 +490,21 @@ function TrelloProvider:create_task(task_name, filename, callback)
 
 	-- Prepare card description
 	local description = "Created from Neovim comment"
+
+	if options and type(options) == "table" and type(options.comment_details) == "table" then
+		local detail_lines = {}
+		for _, line in ipairs(options.comment_details) do
+			local cleaned = trim_string(line)
+			if cleaned then
+				table.insert(detail_lines, "- " .. cleaned)
+			end
+		end
+
+		if #detail_lines > 0 then
+			description = description .. "\n\n**Details:**\n" .. table.concat(detail_lines, "\n")
+		end
+	end
+
 	if filename and filename ~= "" and filename ~= "[Unnamed Buffer]" then
 		description = description .. "\n\n**Source Files:**\n- " .. filename
 	end

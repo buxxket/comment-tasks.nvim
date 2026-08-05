@@ -54,7 +54,7 @@ end
 
 -- Show task creation dialog
 local function show_task_dialog_for_block(
-    initial_text, comment_info, filename, provider_name, effective_config
+    initial_text, comment_info, filename, provider_name, effective_config, extra_details
 )
     provider_name = provider_name or effective_config.default_provider
 
@@ -95,7 +95,9 @@ local function show_task_dialog_for_block(
                     utils.notify_error("Error updating comment with task URL", provider_name)
                 end
             end
-        end)
+        end, {
+            comment_details = extra_details,
+        })
     end)
 end
 
@@ -133,6 +135,7 @@ function M.create_task_from_comment(lang_override, provider_name)
 
     -- Extract content from the comment
     local comment_content = detection.extract_comment_content(comment_info, current_config.comment_prefixes)
+    local comment_lines = detection.extract_comment_lines(comment_info, current_config.comment_prefixes)
 
     if comment_content == "" then
         utils.notify_warn("Comment is empty", provider_name)
@@ -145,7 +148,14 @@ function M.create_task_from_comment(lang_override, provider_name)
         return
     end
 
-    show_task_dialog_for_block(comment_content, comment_info, filename, provider_name, current_config)
+    local extra_details = {}
+    if #comment_lines > 1 then
+        for i = 2, #comment_lines do
+            table.insert(extra_details, comment_lines[i])
+        end
+    end
+
+    show_task_dialog_for_block(comment_content, comment_info, filename, provider_name, current_config, extra_details)
 end
 
 function M.update_task_status_from_comment(status, lang_override, _)
