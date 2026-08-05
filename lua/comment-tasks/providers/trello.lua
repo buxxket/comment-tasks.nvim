@@ -11,6 +11,10 @@ local TrelloProvider = {}
 TrelloProvider.__index = TrelloProvider
 setmetatable(TrelloProvider, { __index = Provider })
 
+local function notify_trello_warning(message)
+	vim.notify("[comment-tasks][trello] " .. message, vim.log.levels.WARN)
+end
+
 local function is_trello_id(value)
 	return type(value) == "string" and value:match("^[a-f0-9]+$") ~= nil and #value == 24
 end
@@ -181,7 +185,17 @@ end
 --- Find the current repo/root folder name to use as a Trello label.
 function TrelloProvider:get_repo_label_name()
 	local start_path = vim.fn.expand("%:p:h")
-	local root = project.find_project_root(start_path)
+	local root = nil
+
+	-- Prefer the true git root so monorepo subproject markers don't win.
+	if type(project.find_git_root) == "function" then
+		root = project.find_git_root(start_path)
+	end
+
+	if not root and type(project.find_project_root) == "function" then
+		root = project.find_project_root(start_path)
+	end
+
 	if not root then
 		root = vim.fn.getcwd()
 	end
@@ -304,13 +318,23 @@ function TrelloProvider:resolve_label_ids(api_key, api_token, callback)
 		callback = function(result)
 			vim.schedule(function()
 				if result.status ~= 200 then
-					callback(nil, "Failed to get board labels")
+					notify_trello_warning("Failed to get board labels, creating card without label-name defaults")
+					if #label_ids == 0 then
+						callback(nil, nil)
+						return
+					end
+					callback(table.concat(label_ids, ","), nil)
 					return
 				end
 
 				local success, labels_data = pcall(vim.fn.json_decode, result.body)
 				if not success or type(labels_data) ~= "table" then
-					callback(nil, "Failed to parse board labels")
+					notify_trello_warning("Failed to parse board labels, creating card without label-name defaults")
+					if #label_ids == 0 then
+						callback(nil, nil)
+						return
+					end
+					callback(table.concat(label_ids, ","), nil)
 					return
 				end
 
@@ -337,13 +361,22 @@ function TrelloProvider:resolve_label_ids(api_key, api_token, callback)
 				end
 
 				if self.config.auto_create_labels == false then
-					callback(nil, "Missing labels and auto_create_labels is disabled: " .. table.concat(missing_labels, ", "))
+					notify_trello_warning("Missing labels and auto_create_labels is disabled: " .. table.concat(missing_labels, ", "))
+					if #label_ids == 0 then
+						callback(nil, nil)
+						return
+					end
+					callback(table.concat(label_ids, ","), nil)
 					return
 				end
 
 				local color = self.config.default_label_color or "blue"
+				local creation_errors = {}
 				local function create_missing_label(index)
 					if index > #missing_labels then
+						if #creation_errors > 0 then
+							notify_trello_warning("Some labels could not be created: " .. table.concat(creation_errors, "; "))
+						end
 						callback(table.concat(label_ids, ","), nil)
 						return
 					end
@@ -351,7 +384,8 @@ function TrelloProvider:resolve_label_ids(api_key, api_token, callback)
 					local label_name = missing_labels[index]
 					self:create_label(self.config.board_id, label_name, color, api_key, api_token, function(new_id, err)
 						if err then
-							callback(nil, err)
+							table.insert(creation_errors, label_name)
+							create_missing_label(index + 1)
 							return
 						end
 
@@ -372,14 +406,6 @@ function TrelloProvider:resolve_card_defaults(api_key, api_token, callback)
 	local pending = 0
 	local finished = false
 
-	local function fail(err)
-		if finished then
-			return
-		end
-		finished = true
-		callback(nil, err)
-	end
-
 	local function done_if_ready()
 		if finished or pending ~= 0 then
 			return
@@ -392,7 +418,8 @@ function TrelloProvider:resolve_card_defaults(api_key, api_token, callback)
 	self:resolve_default_members(api_key, api_token, function(member_ids, err)
 		pending = pending - 1
 		if err then
-			fail(err)
+			notify_trello_warning("Could not resolve default Trello members: " .. tostring(err))
+			done_if_ready()
 			return
 		end
 		if member_ids and member_ids ~= "" then
@@ -405,7 +432,8 @@ function TrelloProvider:resolve_card_defaults(api_key, api_token, callback)
 	self:resolve_label_ids(api_key, api_token, function(label_ids, err)
 		pending = pending - 1
 		if err then
-			fail(err)
+			notify_trello_warning("Could not resolve default Trello labels: " .. tostring(err))
+			done_if_ready()
 			return
 		end
 		if label_ids and label_ids ~= "" then

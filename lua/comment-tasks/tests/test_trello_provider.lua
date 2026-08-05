@@ -1,13 +1,22 @@
 local assert = require("luassert")
 
-local function create_provider(config, http_mock, project_root)
+local function create_provider(config, http_mock, project_paths)
     package.loaded["comment-tasks.providers.trello"] = nil
     package.loaded["comment-tasks.core.http"] = {
         request = http_mock,
     }
     package.loaded["comment-tasks.core.project"] = {
         find_project_root = function()
-            return project_root
+            if type(project_paths) == "table" then
+                return project_paths.project_root
+            end
+            return project_paths
+        end,
+        find_git_root = function()
+            if type(project_paths) == "table" then
+                return project_paths.git_root
+            end
+            return nil
         end,
     }
 
@@ -104,7 +113,7 @@ describe("comment-tasks Trello provider defaults", function()
             if opts.url:match("/boards/board_123/labels") and opts.method == "get" then
                 opts.callback({
                     status = 200,
-                    body = vim.fn.json_encode({ { id = "64f0000000000000000000cd", name = "repo-test" } }),
+                    body = vim.fn.json_encode({ { id = "64f0000000000000000000cd", name = "repo-root" } }),
                 })
                 return
             end
@@ -122,7 +131,7 @@ describe("comment-tasks Trello provider defaults", function()
             end
 
             error("Unexpected request: " .. opts.method .. " " .. opts.url)
-        end, "/tmp/repo-test")
+        end, { git_root = "/tmp/repo-root", project_root = "/tmp/subproject" })
 
         provider:create_task("Repo label card", "file.lua", function(_url, err)
             assert.is_nil(err)
@@ -194,5 +203,66 @@ describe("comment-tasks Trello provider defaults", function()
         assert.is_not_nil(card_body:match("idLabels=64f0000000000000000000ef"))
         assert.is_not_nil(card_body:match("pos=top"))
         assert.is_not_nil(card_body:match("due="))
+    end)
+
+    it("continues card creation when label auto-creation fails", function()
+        local card_body = nil
+
+        local provider = create_provider({
+            enabled = true,
+            board_id = "board_123",
+            statuses = { new = "To Do" },
+            default_label_names = { "backend" },
+            auto_create_labels = true,
+        }, function(opts)
+            if opts.url:match("/boards/board_123/lists") then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ { id = "64f000000000000000000001", name = "To Do" } }),
+                })
+                return
+            end
+
+            if opts.url:match("/boards/board_123/labels") and opts.method == "get" then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({}),
+                })
+                return
+            end
+
+            if opts.url:match("/1/labels$") and opts.method == "post" then
+                opts.callback({
+                    status = 500,
+                    body = "label create failed",
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards$") and opts.method == "post" then
+                card_body = opts.body
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({
+                        id = "card_4",
+                        shortUrl = "https://trello.com/c/card_4",
+                    }),
+                })
+                return
+            end
+
+            error("Unexpected request: " .. opts.method .. " " .. opts.url)
+        end, "/tmp/repo-test")
+
+        local card_url, err = nil, nil
+        provider:create_task("Label failure should not block", "file.lua", function(url, create_err)
+            card_url = url
+            err = create_err
+        end)
+
+        assert.is_nil(err)
+        assert.equals("https://trello.com/c/card_4", card_url)
+        assert.is_not_nil(card_body)
+        assert.is_nil(card_body:match("idLabels="))
     end)
 end)

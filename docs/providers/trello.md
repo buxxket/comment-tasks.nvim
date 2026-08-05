@@ -195,7 +195,7 @@ trello = {
 - `default_member_ids`: Additional Trello member IDs to assign to all new cards.
 - `default_label_ids`: Existing Trello label IDs to apply to all new cards.
 - `default_label_names`: Label names to resolve on the board. Missing labels are auto-created when `auto_create_labels = true`.
-- `add_repo_label`: Uses your detected project/root folder name as a label (for example, `comment-tasks.nvim`).
+- `add_repo_label`: Uses the git repository root folder name as a label (falls back to project root/cwd if git root is unavailable).
 - `default_label_color`: Label color for labels created automatically (`blue`, `green`, `red`, etc.).
 - `card_position`: Sets Trello card position (`top`, `bottom`, or numeric string).
 - `default_due_in_days`: Sets a due date offset for new cards.
@@ -223,6 +223,19 @@ trello = {
    ```
 
 2. **List permissions**: Ensure list exists and isn't archived
+
+### Label creation or lookup failures
+
+When Trello label lookup/creation fails, card creation now continues without those label-name defaults.
+
+1. **Check board labels endpoint**:
+    ```bash
+    curl "https://api.trello.com/1/boards/BOARD_ID/labels?key=API_KEY&token=TOKEN"
+    ```
+
+2. **If needed, disable auto create**:
+    - Set `auto_create_labels = false`
+    - Use `default_label_ids` for existing labels only
 
 ### Authentication Issues
 
