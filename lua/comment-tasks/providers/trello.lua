@@ -39,6 +39,19 @@ local function normalize_label_name(value)
 	return trimmed:lower():gsub("%s+", " ")
 end
 
+local function normalize_label_key(value)
+	local normalized_name = normalize_label_name(value)
+	if not normalized_name then
+		return nil
+	end
+	-- Compact key helps match styles like "RepoName" vs "Repo Name".
+	local compact = normalized_name:gsub("[^%w]", "")
+	if compact == "" then
+		return nil
+	end
+	return compact
+end
+
 local function parse_config_values(values)
 	if values == nil then
 		return {}
@@ -284,7 +297,11 @@ function TrelloProvider:create_label(board_id, label_name, color, api_key, api_t
 		callback = function(result)
 			vim.schedule(function()
 				if result.status < 200 or result.status >= 300 then
-					callback(nil, "Failed to create label: " .. label_name)
+					local details = ""
+					if result.body and result.body ~= "" then
+						details = " - " .. tostring(result.body)
+					end
+					callback(nil, "Failed to create label: " .. label_name .. " (status " .. tostring(result.status) .. ")" .. details)
 					return
 				end
 
@@ -348,18 +365,27 @@ function TrelloProvider:resolve_label_ids(api_key, api_token, callback)
 				end
 
 				local labels_by_name = {}
+				local labels_by_key = {}
 				for _, label in ipairs(labels_data) do
 					if label and type(label) == "table" and label.id then
 						local normalized_name = normalize_label_name(label.name)
 						if normalized_name then
 							labels_by_name[normalized_name] = label.id
+							local key = normalize_label_key(normalized_name)
+							if key then
+								labels_by_key[key] = label.id
+							end
 						end
 					end
 				end
 
 				local missing_labels = {}
 				for _, label_name in ipairs(label_names) do
-					local found_id = labels_by_name[normalize_label_name(label_name)]
+					local normalized_name = normalize_label_name(label_name)
+					local found_id = labels_by_name[normalized_name]
+					if not found_id then
+						found_id = labels_by_key[normalize_label_key(normalized_name)]
+					end
 					if found_id then
 						add_unique(label_ids, found_id)
 					else

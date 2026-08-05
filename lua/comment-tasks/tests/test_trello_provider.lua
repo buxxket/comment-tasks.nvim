@@ -255,6 +255,66 @@ describe("comment-tasks Trello provider defaults", function()
         assert.is_nil(card_body:match("due="))
     end)
 
+    it("matches compact repo label names against spaced board labels", function()
+        local card_body = nil
+        local create_label_called = false
+
+        local provider = create_provider({
+            enabled = true,
+            board_id = "board_123",
+            statuses = { new = "To Do" },
+            default_label_names = { "ArbitrageReportGenerator" },
+            auto_create_labels = true,
+        }, function(opts)
+            if opts.url:match("/boards/board_123/lists") then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ { id = "64f000000000000000000001", name = "To Do" } }),
+                })
+                return
+            end
+
+            if opts.url:match("/boards/board_123/labels") and opts.method == "get" then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ { id = "64f0000000000000000000cc", name = "Arbitrage Report Generator" } }),
+                })
+                return
+            end
+
+            if opts.url:match("/1/labels$") and opts.method == "post" then
+                create_label_called = true
+                opts.callback({
+                    status = 500,
+                    body = "should not be called",
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards$") and opts.method == "post" then
+                card_body = opts.body
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({
+                        id = "card_8",
+                        shortUrl = "https://trello.com/c/card_8",
+                    }),
+                })
+                return
+            end
+
+            error("Unexpected request: " .. opts.method .. " " .. opts.url)
+        end, "/tmp/repo-test")
+
+        provider:create_task("Compact label match", "file.lua", function(_url, err)
+            assert.is_nil(err)
+        end)
+
+        assert.is_false(create_label_called)
+        assert.is_not_nil(card_body)
+        assert.is_not_nil(card_body:match("idLabels=64f0000000000000000000cc"))
+    end)
+
     it("accepts 201 label create response and applies created label", function()
         local card_body = nil
 
