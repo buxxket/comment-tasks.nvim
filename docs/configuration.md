@@ -262,7 +262,7 @@ todoist = {
 
 ### Supported Languages
 
-The plugin automatically detects comments in 15+ languages using Tree-sitter:
+The plugin automatically detects comments in 15+ languages using Tree-sitter, including C# (`csharp` / `cs`):
 
 ```lua
 languages = {

@@ -323,6 +323,52 @@ describe("language-specific comment detection", function()
         end)
     end)
 
+    describe("csharp comments", function()
+        it("should detect csharp single-line comments", function()
+            local cleanup = create_mock_buffer({
+                "// TODO: Add cancellation token support",
+                "// This method should accept CancellationToken",
+                "public async Task<string> FetchAsync() {",
+                "    return await Task.FromResult(\"ok\");",
+                "}"
+            }, {1, 0}, "csharp")
+
+            local comment_info = detection.get_comment_info_regex("csharp", languages_config)
+            assert.is_not_nil(comment_info)
+            if comment_info then
+                assert.equals("csharp", comment_info.lang)
+                assert.is_true(comment_info.is_comment)
+
+                local content = detection.extract_comment_content(comment_info, config.default_config.comment_prefixes)
+                assert.matches("cancellation token support", content)
+            end
+
+            cleanup()
+        end)
+
+        it("should detect cs alias single-line comments", function()
+            local cleanup = create_mock_buffer({
+                "// TODO: Handle null reference safely",
+                "// Add argument validation before use",
+                "public string Process(string input) {",
+                "    return input.Trim();",
+                "}"
+            }, {1, 0}, "cs")
+
+            local comment_info = detection.get_comment_info_regex("cs", languages_config)
+            assert.is_not_nil(comment_info)
+            if comment_info then
+                assert.equals("cs", comment_info.lang)
+                assert.is_true(comment_info.is_comment)
+
+                local content = detection.extract_comment_content(comment_info, config.default_config.comment_prefixes)
+                assert.matches("Handle null reference safely", content)
+            end
+
+            cleanup()
+        end)
+    end)
+
     describe("ruby comments", function()
         it("should detect ruby single-line comments", function()
             local cleanup = create_mock_buffer({

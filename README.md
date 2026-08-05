@@ -43,7 +43,7 @@ Transform your TODO comments into actionable tasks across 10+ platforms while ke
 ## 🌍 Supported Languages
 
 Works with 15+ programming languages including:
-**Python** • **JavaScript/TypeScript** • **Lua** • **Rust** • **C/C++** • **Go** • **Java** • **Ruby** • **PHP** • **CSS** • **HTML** • **Bash** • **Vim Script** • **YAML** • **JSON**
+**Python** • **JavaScript/TypeScript** • **Lua** • **Rust** • **C/C++** • **C#** • **Go** • **Java** • **Ruby** • **PHP** • **CSS** • **HTML** • **Bash** • **Vim Script** • **YAML** • **JSON**
 
 ## 📦 Installation
 

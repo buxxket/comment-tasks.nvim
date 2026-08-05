@@ -294,6 +294,32 @@ M.default_config = {
             },
         },
 
+        csharp = {
+            comment_nodes = { "comment", "line_comment", "block_comment", "documentation_comment", "Comment", "multiline_comment" },
+            comment_styles = {
+                single_line = { prefix = "// ", continue_with = "// " },
+                doc_line = { prefix = "/// ", continue_with = "/// " },
+                block = {
+                    start_markers = { "/*" },
+                    end_markers = { "*/" },
+                    continue_with = " * ",
+                },
+            },
+        },
+
+        cs = {
+            comment_nodes = { "comment", "line_comment", "block_comment", "documentation_comment", "Comment", "multiline_comment" },
+            comment_styles = {
+                single_line = { prefix = "// ", continue_with = "// " },
+                doc_line = { prefix = "/// ", continue_with = "/// " },
+                block = {
+                    start_markers = { "/*" },
+                    end_markers = { "*/" },
+                    continue_with = " * ",
+                },
+            },
+        },
+
         ruby = {
             comment_nodes = { "comment", "Comment", "line_comment" },
             comment_styles = {
