@@ -82,6 +82,9 @@ run_suite "Detection & URL Utilities" \
 run_suite "Provider Functionality" \
     lua/comment-tasks/tests/test_providers.lua
 
+run_suite "Trello Provider Advanced Defaults" \
+    lua/comment-tasks/tests/test_trello_provider.lua
+
 run_suite "Cross-module Integration" \
     lua/comment-tasks/tests/test_integration.lua
 

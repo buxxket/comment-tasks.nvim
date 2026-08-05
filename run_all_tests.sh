@@ -88,6 +88,9 @@ run_specs "Enhanced Detection & URL Utilities" \
 run_specs "Provider Functionality" \
     lua/comment-tasks/tests/test_providers.lua
 
+run_specs "Trello Provider Advanced Defaults" \
+    lua/comment-tasks/tests/test_trello_provider.lua
+
 run_specs "Cross-module Integration" \
     lua/comment-tasks/tests/test_integration.lua
 

@@ -81,6 +81,26 @@ comment_tasks.setup({
                 archived = "#state_def456"    -- Regular status (direct state ID)
             },
         },
+
+        trello = {
+            enabled = true,
+            api_key_env = "TRELLO_API_KEY",
+            api_token_env = "TRELLO_API_TOKEN",
+            board_id = "your_board_id",
+            assign_to_me = true, -- Assign new cards to your token user
+            add_repo_label = true, -- Label cards with detected repo/root folder name
+            auto_create_labels = true,
+            default_label_color = "blue",
+            default_label_names = { "todo" },
+            card_position = "top",
+            default_due_in_days = 2,
+            statuses = {
+                new = "To Do",
+                in_progress = "Doing",
+                review = "Review",
+                completed = "Done",
+            },
+        },
     },
 
     -- Comment prefixes to recognize (applies to all providers)

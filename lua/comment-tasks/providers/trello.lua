@@ -2,6 +2,7 @@
 
 local http = require("comment-tasks.core.http")
 local interface = require("comment-tasks.providers.interface")
+local project = require("comment-tasks.core.project")
 
 ---@type Provider
 local Provider = interface.Provider
@@ -9,6 +10,68 @@ local Provider = interface.Provider
 local TrelloProvider = {}
 TrelloProvider.__index = TrelloProvider
 setmetatable(TrelloProvider, { __index = Provider })
+
+local function is_trello_id(value)
+	return type(value) == "string" and value:match("^[a-f0-9]+$") ~= nil and #value == 24
+end
+
+local function trim_string(value)
+	if type(value) ~= "string" then
+		return nil
+	end
+	local trimmed = value:gsub("^%s+", ""):gsub("%s+$", "")
+	if trimmed == "" then
+		return nil
+	end
+	return trimmed
+end
+
+local function parse_config_values(values)
+	if values == nil then
+		return {}
+	end
+
+	local result = {}
+	if type(values) == "table" then
+		for _, value in ipairs(values) do
+			local trimmed = trim_string(value)
+			if trimmed then
+				table.insert(result, trimmed)
+			end
+		end
+	elseif type(values) == "string" then
+		for raw_value in values:gmatch("[^,]+") do
+			local trimmed = trim_string(raw_value)
+			if trimmed then
+				table.insert(result, trimmed)
+			end
+		end
+	end
+
+	return result
+end
+
+local function add_unique(values, value)
+	if not value then
+		return
+	end
+
+	for _, existing in ipairs(values) do
+		if existing == value then
+			return
+		end
+	end
+
+	table.insert(values, value)
+end
+
+local function build_encoded_params(params)
+	local param_strings = {}
+	for key, value in pairs(params) do
+		table.insert(param_strings, key .. "=" .. vim.uri_encode(tostring(value)))
+	end
+	return table.concat(param_strings, "&")
+end
 
 --- Create a new Trello provider instance
 function TrelloProvider:new(provider_config)
@@ -71,6 +134,299 @@ function TrelloProvider:get_list_id_for_status(status)
 	return list_name, nil
 end
 
+--- Resolve a list identifier (ID or list name) to a Trello list ID.
+function TrelloProvider:resolve_list_id(list_reference, api_key, api_token, callback)
+	if is_trello_id(list_reference) then
+		callback(list_reference, nil)
+		return
+	end
+
+	local lists_url = "https://api.trello.com/1/boards/" .. self.config.board_id .. "/lists"
+	local lists_params = "key=" .. api_key .. "&token=" .. api_token
+
+	http.request({
+		url = lists_url .. "?" .. lists_params,
+		method = "get",
+		callback = function(lists_result)
+			vim.schedule(function()
+				if lists_result.status ~= 200 then
+					callback(nil, "Failed to get board lists")
+					return
+				end
+
+				local success, lists_data = pcall(vim.fn.json_decode, lists_result.body)
+				if not success then
+					callback(nil, "Failed to parse lists response")
+					return
+				end
+
+				if type(lists_data) ~= "table" then
+					callback(nil, "No lists data returned")
+					return
+				end
+
+				for _, list_item in ipairs(lists_data) do
+					if list_item and type(list_item) == "table" and list_item.name == list_reference then
+						callback(list_item.id, nil)
+						return
+					end
+				end
+
+				callback(nil, "List not found: " .. tostring(list_reference))
+			end)
+		end,
+	})
+end
+
+--- Find the current repo/root folder name to use as a Trello label.
+function TrelloProvider:get_repo_label_name()
+	local start_path = vim.fn.expand("%:p:h")
+	local root = project.find_project_root(start_path)
+	if not root then
+		root = vim.fn.getcwd()
+	end
+
+	local repo_name = trim_string(vim.fn.fnamemodify(root, ":t"))
+	return repo_name
+end
+
+--- Resolve "assign to me" into a Trello member ID.
+function TrelloProvider:resolve_my_member_id(api_key, api_token, callback)
+	local me_url = "https://api.trello.com/1/members/me"
+	local me_params = "key=" .. api_key .. "&token=" .. api_token .. "&fields=id"
+
+	http.request({
+		url = me_url .. "?" .. me_params,
+		method = "get",
+		callback = function(result)
+			vim.schedule(function()
+				if result.status ~= 200 then
+					callback(nil, "Failed to resolve current Trello member")
+					return
+				end
+
+				local success, response = pcall(vim.fn.json_decode, result.body)
+				if not success or not response or not response.id then
+					callback(nil, "Failed to parse current Trello member")
+					return
+				end
+
+				callback(response.id, nil)
+			end)
+		end,
+	})
+end
+
+--- Resolve configured member defaults into a Trello idMembers value.
+function TrelloProvider:resolve_default_members(api_key, api_token, callback)
+	local member_ids = parse_config_values(self.config.default_member_ids)
+	local should_assign_to_me = self.config.assign_to_me == true
+
+	if not should_assign_to_me then
+		if #member_ids == 0 then
+			callback(nil, nil)
+			return
+		end
+		callback(table.concat(member_ids, ","), nil)
+		return
+	end
+
+	self:resolve_my_member_id(api_key, api_token, function(my_member_id, err)
+		if err then
+			callback(nil, err)
+			return
+		end
+
+		add_unique(member_ids, my_member_id)
+		callback(table.concat(member_ids, ","), nil)
+	end)
+end
+
+function TrelloProvider:create_label(board_id, label_name, color, api_key, api_token, callback)
+	local params_string = build_encoded_params({
+		idBoard = board_id,
+		name = label_name,
+		color = color,
+		key = api_key,
+		token = api_token,
+	})
+
+	http.request({
+		url = "https://api.trello.com/1/labels",
+		method = "post",
+		headers = {
+			["Content-Type"] = "application/x-www-form-urlencoded",
+		},
+		body = params_string,
+		callback = function(result)
+			vim.schedule(function()
+				if result.status ~= 200 then
+					callback(nil, "Failed to create label: " .. label_name)
+					return
+				end
+
+				local success, response = pcall(vim.fn.json_decode, result.body)
+				if not success or not response or not response.id then
+					callback(nil, "Failed to parse created label response")
+					return
+				end
+
+				callback(response.id, nil)
+			end)
+		end,
+	})
+end
+
+function TrelloProvider:resolve_label_ids(api_key, api_token, callback)
+	local label_ids = parse_config_values(self.config.default_label_ids)
+	local label_names = parse_config_values(self.config.default_label_names)
+
+	if self.config.add_repo_label == true then
+		add_unique(label_names, self:get_repo_label_name())
+	end
+
+	if #label_ids == 0 and #label_names == 0 then
+		callback(nil, nil)
+		return
+	end
+
+	if #label_names == 0 then
+		callback(table.concat(label_ids, ","), nil)
+		return
+	end
+
+	local labels_url = "https://api.trello.com/1/boards/" .. self.config.board_id .. "/labels"
+	local labels_params = "key=" .. api_key .. "&token=" .. api_token .. "&fields=name&limit=1000"
+
+	http.request({
+		url = labels_url .. "?" .. labels_params,
+		method = "get",
+		callback = function(result)
+			vim.schedule(function()
+				if result.status ~= 200 then
+					callback(nil, "Failed to get board labels")
+					return
+				end
+
+				local success, labels_data = pcall(vim.fn.json_decode, result.body)
+				if not success or type(labels_data) ~= "table" then
+					callback(nil, "Failed to parse board labels")
+					return
+				end
+
+				local labels_by_name = {}
+				for _, label in ipairs(labels_data) do
+					if label and type(label) == "table" and label.id and label.name and label.name ~= "" then
+						labels_by_name[label.name:lower()] = label.id
+					end
+				end
+
+				local missing_labels = {}
+				for _, label_name in ipairs(label_names) do
+					local found_id = labels_by_name[label_name:lower()]
+					if found_id then
+						add_unique(label_ids, found_id)
+					else
+						table.insert(missing_labels, label_name)
+					end
+				end
+
+				if #missing_labels == 0 then
+					callback(table.concat(label_ids, ","), nil)
+					return
+				end
+
+				if self.config.auto_create_labels == false then
+					callback(nil, "Missing labels and auto_create_labels is disabled: " .. table.concat(missing_labels, ", "))
+					return
+				end
+
+				local color = self.config.default_label_color or "blue"
+				local function create_missing_label(index)
+					if index > #missing_labels then
+						callback(table.concat(label_ids, ","), nil)
+						return
+					end
+
+					local label_name = missing_labels[index]
+					self:create_label(self.config.board_id, label_name, color, api_key, api_token, function(new_id, err)
+						if err then
+							callback(nil, err)
+							return
+						end
+
+						add_unique(label_ids, new_id)
+						create_missing_label(index + 1)
+					end)
+				end
+
+				create_missing_label(1)
+			end)
+		end,
+	})
+end
+
+--- Resolve all default card options (members, labels, due date, card position).
+function TrelloProvider:resolve_card_defaults(api_key, api_token, callback)
+	local defaults = {}
+	local pending = 0
+	local finished = false
+
+	local function fail(err)
+		if finished then
+			return
+		end
+		finished = true
+		callback(nil, err)
+	end
+
+	local function done_if_ready()
+		if finished or pending ~= 0 then
+			return
+		end
+		finished = true
+		callback(defaults, nil)
+	end
+
+	pending = pending + 1
+	self:resolve_default_members(api_key, api_token, function(member_ids, err)
+		pending = pending - 1
+		if err then
+			fail(err)
+			return
+		end
+		if member_ids and member_ids ~= "" then
+			defaults.idMembers = member_ids
+		end
+		done_if_ready()
+	end)
+
+	pending = pending + 1
+	self:resolve_label_ids(api_key, api_token, function(label_ids, err)
+		pending = pending - 1
+		if err then
+			fail(err)
+			return
+		end
+		if label_ids and label_ids ~= "" then
+			defaults.idLabels = label_ids
+		end
+		done_if_ready()
+	end)
+
+	if self.config.card_position then
+		defaults.pos = self.config.card_position
+	end
+
+	if type(self.config.default_due_in_days) == "number" and self.config.default_due_in_days >= 0 then
+		local now = os.time()
+		local due_at = now + math.floor(self.config.default_due_in_days * 86400)
+		defaults.due = os.date("!%Y-%m-%dT%H:%M:%SZ", due_at)
+	end
+
+	done_if_ready()
+end
+
 --- Create a new Trello card
 function TrelloProvider:create_task(task_name, filename, callback)
 	local api_key, error = self:get_api_key()
@@ -98,60 +454,25 @@ function TrelloProvider:create_task(task_name, filename, callback)
 		description = description .. "\n\n**Source Files:**\n- " .. filename
 	end
 
-	-- If list_id is a name, we need to get the actual list ID first
-	if not list_id:match("^[a-f0-9]+$") or #list_id ~= 24 then
-		-- Get board lists to find the list ID
-		local lists_url = "https://api.trello.com/1/boards/" .. self.config.board_id .. "/lists"
-		local lists_params = "key=" .. api_key .. "&token=" .. api_token
+	self:resolve_list_id(list_id, api_key, api_token, function(resolved_list_id, list_resolve_error)
+		if list_resolve_error then
+			callback(nil, list_resolve_error)
+			return
+		end
 
-		http.request({
-			url = lists_url .. "?" .. lists_params,
-			method = "get",
-			callback = function(lists_result)
-				vim.schedule(function()
-					if lists_result.status ~= 200 then
-						callback(nil, "Failed to get board lists")
-						return
-					end
+		self:resolve_card_defaults(api_key, api_token, function(card_defaults, defaults_error)
+			if defaults_error then
+				callback(nil, defaults_error)
+				return
+			end
 
-					local success, lists_data = pcall(vim.fn.json_decode, lists_result.body)
-					if not success then
-						callback(nil, "Failed to parse lists response")
-						return
-					end
-
-					-- Find the list ID by name
-					local found_list_id = nil
-					if lists_data and type(lists_data) == "table" then
-						for _, list_item in ipairs(lists_data) do
-							if list_item and type(list_item) == "table" and list_item.name == list_id then
-								found_list_id = list_item.id
-								break
-							end
-						end
-					else
-						callback(nil, "No lists data returned")
-						return
-					end
-
-					if not found_list_id then
-						callback(nil, "List not found: " .. list_id)
-						return
-					end
-
-					-- Now create the card with the found list ID
-					self:create_card_in_list(found_list_id, task_name, description, api_key, api_token, callback)
-				end)
-			end,
-		})
-	else
-		-- list_id is already a valid ID
-		self:create_card_in_list(list_id, task_name, description, api_key, api_token, callback)
-	end
+			self:create_card_in_list(resolved_list_id, task_name, description, api_key, api_token, callback, card_defaults)
+		end)
+	end)
 end
 
 --- Create card in specific list (helper function)
-function TrelloProvider:create_card_in_list(list_id, task_name, description, api_key, api_token, callback)
+function TrelloProvider:create_card_in_list(list_id, task_name, description, api_key, api_token, callback, card_defaults)
 	local card_params = {
 		name = task_name,
 		desc = description,
@@ -160,12 +481,15 @@ function TrelloProvider:create_card_in_list(list_id, task_name, description, api
 		token = api_token,
 	}
 
-	-- Convert params to URL-encoded string
-	local param_strings = {}
-	for key, value in pairs(card_params) do
-		table.insert(param_strings, key .. "=" .. vim.uri_encode(tostring(value)))
+	if type(card_defaults) == "table" then
+		for key, value in pairs(card_defaults) do
+			if value ~= nil and value ~= "" then
+				card_params[key] = value
+			end
+		end
 	end
-	local params_string = table.concat(param_strings, "&")
+
+	local params_string = build_encoded_params(card_params)
 
 	http.request({
 		url = "https://api.trello.com/1/cards",
@@ -225,52 +549,14 @@ function TrelloProvider:update_task_status(card_id, status, callback)
 		return
 	end
 
-	-- If list_id is a name, resolve it to an ID first
-	if not list_id:match("^[a-f0-9]+$") or #list_id ~= 24 then
-		local lists_url = "https://api.trello.com/1/boards/" .. self.config.board_id .. "/lists"
-		local lists_params = "key=" .. api_key .. "&token=" .. api_token
+	self:resolve_list_id(list_id, api_key, api_token, function(resolved_list_id, list_resolve_error)
+		if list_resolve_error then
+			callback(nil, list_resolve_error)
+			return
+		end
 
-		http.request({
-			url = lists_url .. "?" .. lists_params,
-			method = "get",
-			callback = function(lists_result)
-				vim.schedule(function()
-					if lists_result.status ~= 200 then
-						callback(nil, "Failed to get board lists")
-						return
-					end
-
-					local success, lists_data = pcall(vim.fn.json_decode, lists_result.body)
-					if not success then
-						callback(nil, "Failed to parse lists response")
-						return
-					end
-
-					-- Find the list ID by name
-					local found_list_id = nil
-					if lists_data and type(lists_data) == "table" then
-						for _, list_item in ipairs(lists_data) do
-							if list_item and type(list_item) == "table" and list_item.name == list_id then
-								found_list_id = list_item.id
-								break
-							end
-						end
-					end
-
-					if not found_list_id then
-						callback(nil, "Target list not found: " .. list_id)
-						return
-					end
-
-					-- Now move the card
-					self:move_card_to_list(card_id, found_list_id, api_key, api_token, callback)
-				end)
-			end,
-		})
-	else
-		-- list_id is already a valid ID
-		self:move_card_to_list(card_id, list_id, api_key, api_token, callback)
-	end
+		self:move_card_to_list(card_id, resolved_list_id, api_key, api_token, callback)
+	end)
 end
 
 --- Move card to different list (helper function)
@@ -281,11 +567,7 @@ function TrelloProvider:move_card_to_list(card_id, list_id, api_key, api_token, 
 		token = api_token,
 	}
 
-	local param_strings = {}
-	for key, value in pairs(update_params) do
-		table.insert(param_strings, key .. "=" .. tostring(value))
-	end
-	local params_string = table.concat(param_strings, "&")
+	local params_string = build_encoded_params(update_params)
 
 	http.request({
 		url = "https://api.trello.com/1/cards/" .. card_id,

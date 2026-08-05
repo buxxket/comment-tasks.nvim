@@ -132,6 +132,15 @@ M.default_config = {
             api_key_env = "TRELLO_API_KEY",
             api_token_env = "TRELLO_API_TOKEN", -- Trello requires both key and token
             board_id = nil, -- Required: Trello board ID
+            assign_to_me = false, -- Optional: assign new cards to current Trello user
+            default_member_ids = {}, -- Optional: additional Trello member IDs to assign
+            default_label_ids = {}, -- Optional: Trello label IDs to add to new cards
+            default_label_names = {}, -- Optional: Trello label names (resolved/created on board)
+            add_repo_label = false, -- Optional: add current repo/root folder name as label
+            auto_create_labels = true, -- Optional: create missing configured labels on board
+            default_label_color = "blue", -- Color for auto-created labels
+            card_position = nil, -- Optional: "top", "bottom", or numeric position
+            default_due_in_days = nil, -- Optional: due date offset in days for new cards
             -- Trello uses lists as statuses
             statuses = {
                 new = "To Do",        -- Special: List for new cards (creates cards)

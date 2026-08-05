@@ -29,6 +29,16 @@ require("comment-tasks").setup({
             api_key_env = "TRELLO_API_KEY",
             api_token_env = "TRELLO_API_TOKEN",
             board_id = "your_board_id",         -- Required: Trello board ID
+
+            -- New card defaults (optional)
+            assign_to_me = true,                 -- Assign new cards to current Trello user
+            add_repo_label = true,               -- Add repo/root folder name as label
+            auto_create_labels = true,           -- Create missing labels automatically
+            default_label_color = "blue",       -- Color for auto-created labels
+            default_label_names = { "todo" },   -- Additional labels by name
+            default_member_ids = {},             -- Additional Trello member IDs
+            card_position = "top",              -- "top", "bottom", or numeric position
+            default_due_in_days = 3,             -- Set due date relative to creation time
             
             -- Statuses map to list names on the board; cards move between lists
             statuses = {
@@ -156,6 +166,16 @@ trello = {
     api_key_env = "TRELLO_API_KEY",
     api_token_env = "TRELLO_API_TOKEN",
     board_id = "abc123def456",
+
+    assign_to_me = true,
+    default_member_ids = { "64fabc123def4567890abcd" },
+    default_label_ids = { "64fdef123abc4567890dcba" },
+    default_label_names = { "backend", "todo" },
+    add_repo_label = true,
+    auto_create_labels = true,
+    default_label_color = "blue",
+    card_position = "top",
+    default_due_in_days = 2,
     
     -- Map as many workflow statuses to lists as you need
     statuses = {
@@ -168,6 +188,17 @@ trello = {
     },
 }
 ```
+
+### Advanced Trello Defaults
+
+- `assign_to_me`: Resolves the current API token user via `/1/members/me` and adds them to every new card.
+- `default_member_ids`: Additional Trello member IDs to assign to all new cards.
+- `default_label_ids`: Existing Trello label IDs to apply to all new cards.
+- `default_label_names`: Label names to resolve on the board. Missing labels are auto-created when `auto_create_labels = true`.
+- `add_repo_label`: Uses your detected project/root folder name as a label (for example, `comment-tasks.nvim`).
+- `default_label_color`: Label color for labels created automatically (`blue`, `green`, `red`, etc.).
+- `card_position`: Sets Trello card position (`top`, `bottom`, or numeric string).
+- `default_due_in_days`: Sets a due date offset for new cards.
 
 ## Troubleshooting
 
