@@ -170,7 +170,7 @@ describe("comment-tasks Trello provider defaults", function()
                 return
             end
 
-            if opts.url:match("/1/labels$") and opts.method == "post" then
+            if opts.url:match("/boards/board_123/labels$") and opts.method == "post" then
                 assert.is_not_nil(opts.body:match("name=backend"))
                 assert.is_not_nil(opts.body:match("color=green"))
                 opts.callback({
@@ -282,7 +282,7 @@ describe("comment-tasks Trello provider defaults", function()
                 return
             end
 
-            if opts.url:match("/1/labels$") and opts.method == "post" then
+            if opts.url:match("/boards/board_123/labels$") and opts.method == "post" then
                 create_label_called = true
                 opts.callback({
                     status = 500,
@@ -341,7 +341,7 @@ describe("comment-tasks Trello provider defaults", function()
                 return
             end
 
-            if opts.url:match("/1/labels$") and opts.method == "post" then
+            if opts.url:match("/boards/board_123/labels$") and opts.method == "post" then
                 opts.callback({
                     status = 201,
                     body = vim.fn.json_encode({ id = "64f0000000000000000000bb" }),
@@ -398,7 +398,7 @@ describe("comment-tasks Trello provider defaults", function()
                 return
             end
 
-            if opts.url:match("/1/labels$") and opts.method == "post" then
+            if opts.url:match("/boards/board_123/labels$") and opts.method == "post" then
                 opts.callback({
                     status = 500,
                     body = "label create failed",

@@ -52,6 +52,35 @@ local function normalize_label_key(value)
 	return compact
 end
 
+local VALID_LABEL_COLORS = {
+	green = true,
+	yellow = true,
+	orange = true,
+	red = true,
+	purple = true,
+	blue = true,
+	sky = true,
+	lime = true,
+	pink = true,
+	black = true,
+	null = true,
+}
+
+local function resolve_label_color(configured)
+	local color = trim_string(configured)
+	if not color then
+		return "blue"
+	end
+
+	local normalized = color:lower()
+	if VALID_LABEL_COLORS[normalized] then
+		return normalized
+	end
+
+	notify_trello_warning("Invalid default_label_color '" .. color .. "', falling back to 'blue'")
+	return "blue"
+end
+
 local function parse_config_values(values)
 	if values == nil then
 		return {}
@@ -280,7 +309,6 @@ end
 
 function TrelloProvider:create_label(board_id, label_name, color, api_key, api_token, callback)
 	local params_string = build_encoded_params({
-		idBoard = board_id,
 		name = label_name,
 		color = color,
 		key = api_key,
@@ -288,7 +316,7 @@ function TrelloProvider:create_label(board_id, label_name, color, api_key, api_t
 	})
 
 	http.request({
-		url = "https://api.trello.com/1/labels",
+		url = "https://api.trello.com/1/boards/" .. board_id .. "/labels",
 		method = "post",
 		headers = {
 			["Content-Type"] = "application/x-www-form-urlencoded",
@@ -299,7 +327,12 @@ function TrelloProvider:create_label(board_id, label_name, color, api_key, api_t
 				if result.status < 200 or result.status >= 300 then
 					local details = ""
 					if result.body and result.body ~= "" then
-						details = " - " .. tostring(result.body)
+						local parsed = nil
+						local ok, decoded = pcall(vim.fn.json_decode, result.body)
+						if ok and type(decoded) == "table" then
+							parsed = decoded.message or decoded.error or decoded._message
+						end
+						details = " - " .. tostring(parsed or result.body)
 					end
 					callback(nil, "Failed to create label: " .. label_name .. " (status " .. tostring(result.status) .. ")" .. details)
 					return
@@ -408,7 +441,7 @@ function TrelloProvider:resolve_label_ids(api_key, api_token, callback)
 					return
 				end
 
-				local color = self.config.default_label_color or "blue"
+				local color = resolve_label_color(self.config.default_label_color)
 				local creation_errors = {}
 				local function create_missing_label(index)
 					if index > #missing_labels then
@@ -422,7 +455,7 @@ function TrelloProvider:resolve_label_ids(api_key, api_token, callback)
 					local label_name = missing_labels[index]
 					self:create_label(self.config.board_id, label_name, color, api_key, api_token, function(new_id, err)
 						if err then
-							table.insert(creation_errors, label_name)
+							table.insert(creation_errors, label_name .. " -> " .. tostring(err))
 							create_missing_label(index + 1)
 							return
 						end
