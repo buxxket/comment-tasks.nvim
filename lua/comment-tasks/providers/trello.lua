@@ -109,6 +109,22 @@ local function resolve_card_position(configured)
 	return nil
 end
 
+function TrelloProvider:get_create_card_position()
+	local configured = self.config.create_card_position
+	if configured == nil then
+		configured = self.config.card_position
+	end
+	return resolve_card_position(configured)
+end
+
+function TrelloProvider:get_move_card_position()
+	local configured = self.config.move_card_position
+	if configured == nil then
+		configured = self.config.card_position
+	end
+	return resolve_card_position(configured)
+end
+
 local function parse_config_values(values)
 	if values == nil then
 		return {}
@@ -541,7 +557,7 @@ function TrelloProvider:resolve_card_defaults(api_key, api_token, callback)
 		done_if_ready()
 	end)
 
-	local resolved_pos = resolve_card_position(self.config.card_position)
+	local resolved_pos = self:get_create_card_position()
 	if resolved_pos ~= nil then
 		defaults.pos = resolved_pos
 	end
@@ -746,11 +762,17 @@ end
 
 --- Move card to different list (helper function)
 function TrelloProvider:move_card_to_list(card_id, list_id, api_key, api_token, callback)
+	local desired_pos = self:get_move_card_position()
+
 	local update_params = {
 		idList = list_id,
 		key = api_key,
 		token = api_token,
 	}
+
+	if desired_pos ~= nil then
+		update_params.pos = desired_pos
+	end
 
 	local params_string = build_encoded_params(update_params)
 
@@ -763,10 +785,21 @@ function TrelloProvider:move_card_to_list(card_id, list_id, api_key, api_token, 
 		body = params_string,
 		callback = function(result)
 			vim.schedule(function()
-				if result.status ~= 200 then
+				if result.status < 200 or result.status >= 300 then
 					callback(nil, "Failed to move card: " .. (result.body or "Unknown error"))
 					return
 				end
+
+				if desired_pos ~= nil then
+					self:enforce_card_position(card_id, desired_pos, api_key, api_token, function(position_err)
+						if position_err then
+							notify_trello_warning(position_err)
+						end
+						callback(true, nil)
+					end)
+					return
+				end
+
 				callback(true, nil)
 			end)
 		end,

@@ -174,7 +174,9 @@ trello = {
     add_repo_label = true,
     auto_create_labels = true,
     default_label_color = "blue",
-    card_position = "top",
+    create_card_position = "top",
+    move_card_position = "bottom",
+    card_position = "top", -- Backward-compatible fallback for both create + move
     default_due_in_days = 2,
     
     -- Map as many workflow statuses to lists as you need
@@ -197,7 +199,9 @@ trello = {
 - `default_label_names`: Label names to resolve on the board. Missing labels are auto-created when `auto_create_labels = true`.
 - `add_repo_label`: Uses the git repository root folder name as a label (falls back to project root/cwd if git root is unavailable).
 - `default_label_color`: Label color for labels created automatically (`blue`, `green`, `red`, etc.).
-- `card_position`: Sets Trello card position (`top`, `bottom`, or numeric string).
+- `create_card_position`: Position used for newly created cards (`top`, `bottom`, or numeric string).
+- `move_card_position`: Position used when moving cards to a different list via status updates.
+- `card_position`: Backward-compatible fallback applied when `create_card_position` / `move_card_position` are not set.
 - `default_due_in_days`: Sets a due date offset for new cards. Use `0` (or `nil`) to disable due dates.
 
 ## Troubleshooting

@@ -92,7 +92,9 @@ comment_tasks.setup({
             auto_create_labels = true,
             default_label_color = "blue",
             default_label_names = { "todo" },
-            card_position = "top",
+            create_card_position = "top",
+            move_card_position = "bottom",
+            card_position = "top", -- Backward-compatible fallback if the above are unset
             default_due_in_days = 2,
             statuses = {
                 new = "To Do",

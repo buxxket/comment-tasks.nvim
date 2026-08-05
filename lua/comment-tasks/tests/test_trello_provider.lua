@@ -152,7 +152,7 @@ describe("comment-tasks Trello provider defaults", function()
             default_label_names = { "backend" },
             auto_create_labels = true,
             default_label_color = "green",
-            card_position = "top",
+            create_card_position = "top",
             default_due_in_days = 2,
         }, function(opts)
             if opts.url:match("/boards/board_123/lists") then
@@ -487,5 +487,138 @@ describe("comment-tasks Trello provider defaults", function()
         assert.is_not_nil(card_body)
         assert.is_not_nil(card_body:match("Details%%3A"))
         assert.is_not_nil(card_body:match("combined%%20total%%20cost"))
+    end)
+
+    it("moves cards with top position during status updates", function()
+        local move_body = nil
+        local enforce_body = nil
+
+        local provider = create_provider({
+            enabled = true,
+            board_id = "board_123",
+            move_card_position = "top",
+            statuses = {
+                in_progress = "In Progress",
+                backlog = "Backlog",
+            },
+        }, function(opts)
+            if opts.url:match("/boards/board_123/lists") then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({
+                        { id = "64f000000000000000000010", name = "In Progress" },
+                        { id = "64f000000000000000000011", name = "Backlog" },
+                    }),
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards/xAqgxW5O$") and opts.method == "put" then
+                if not move_body then
+                    move_body = opts.body
+                else
+                    enforce_body = opts.body
+                end
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ id = "xAqgxW5O" }),
+                })
+                return
+            end
+
+            error("Unexpected request: " .. opts.method .. " " .. opts.url)
+        end, "/tmp/repo-test")
+
+        local success, err = nil, nil
+        provider:update_task_status("xAqgxW5O", "backlog", function(ok, update_err)
+            success = ok
+            err = update_err
+        end)
+
+        assert.is_nil(err)
+        assert.is_true(success)
+        assert.is_not_nil(move_body)
+        assert.is_not_nil(move_body:match("idList=64f000000000000000000011"))
+        assert.is_not_nil(move_body:match("pos=top"))
+        assert.is_not_nil(enforce_body)
+        assert.is_not_nil(enforce_body:match("pos=top"))
+    end)
+
+    it("uses card_position as fallback for create and move when specific settings are unset", function()
+        local create_body = nil
+        local create_enforce_body = nil
+        local move_body = nil
+
+        local provider = create_provider({
+            enabled = true,
+            board_id = "board_123",
+            card_position = "bottom",
+            statuses = {
+                new = "To Do",
+                backlog = "Backlog",
+            },
+        }, function(opts)
+            if opts.url:match("/boards/board_123/lists") then
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({
+                        { id = "64f000000000000000000001", name = "To Do" },
+                        { id = "64f000000000000000000011", name = "Backlog" },
+                    }),
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards$") and opts.method == "post" then
+                create_body = opts.body
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({
+                        id = "64f000000000000000000099",
+                        shortUrl = "https://trello.com/c/card_9",
+                    }),
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards/64f000000000000000000099$") and opts.method == "put" then
+                create_enforce_body = opts.body
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ id = "64f000000000000000000099" }),
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards/xAqgxW5O$") and opts.method == "put" then
+                move_body = opts.body
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ id = "xAqgxW5O" }),
+                })
+                return
+            end
+
+            error("Unexpected request: " .. opts.method .. " " .. opts.url)
+        end, "/tmp/repo-test")
+
+        provider:create_task("Fallback position", "file.lua", function(_url, err)
+            assert.is_nil(err)
+        end)
+
+        local success, err = nil, nil
+        provider:update_task_status("xAqgxW5O", "backlog", function(ok, update_err)
+            success = ok
+            err = update_err
+        end)
+
+        assert.is_nil(err)
+        assert.is_true(success)
+        assert.is_not_nil(create_body)
+        assert.is_not_nil(create_body:match("pos=bottom"))
+        assert.is_not_nil(create_enforce_body)
+        assert.is_not_nil(create_enforce_body:match("pos=bottom"))
+        assert.is_not_nil(move_body)
+        assert.is_not_nil(move_body:match("pos=bottom"))
     end)
 end)

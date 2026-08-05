@@ -139,6 +139,8 @@ M.default_config = {
             add_repo_label = false, -- Optional: add current repo/root folder name as label
             auto_create_labels = true, -- Optional: create missing configured labels on board
             default_label_color = "blue", -- Color for auto-created labels
+            create_card_position = nil, -- Optional: position for newly created cards
+            move_card_position = nil, -- Optional: position when moving cards between lists
             card_position = nil, -- Optional: "top", "bottom", or numeric position
             default_due_in_days = nil, -- Optional: due date offset in days for new cards (0 disables)
             -- Trello uses lists as statuses
