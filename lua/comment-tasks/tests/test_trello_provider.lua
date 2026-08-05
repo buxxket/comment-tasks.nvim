@@ -143,6 +143,7 @@ describe("comment-tasks Trello provider defaults", function()
 
     it("auto-creates missing labels and applies card metadata defaults", function()
         local card_body = nil
+        local position_update_called = false
 
         local provider = create_provider({
             enabled = true,
@@ -185,9 +186,19 @@ describe("comment-tasks Trello provider defaults", function()
                 opts.callback({
                     status = 200,
                     body = vim.fn.json_encode({
-                        id = "card_3",
+                        id = "64f0000000000000000000f3",
                         shortUrl = "https://trello.com/c/card_3",
                     }),
+                })
+                return
+            end
+
+            if opts.url:match("/1/cards/64f0000000000000000000f3$") and opts.method == "put" then
+                position_update_called = true
+                assert.is_not_nil(opts.body:match("pos=top"))
+                opts.callback({
+                    status = 200,
+                    body = vim.fn.json_encode({ id = "64f0000000000000000000f3" }),
                 })
                 return
             end
@@ -203,6 +214,7 @@ describe("comment-tasks Trello provider defaults", function()
         assert.is_not_nil(card_body:match("idLabels=64f0000000000000000000ef"))
         assert.is_not_nil(card_body:match("pos=top"))
         assert.is_not_nil(card_body:match("due="))
+        assert.is_true(position_update_called)
     end)
 
     it("matches label names case-insensitively and with trimmed whitespace", function()

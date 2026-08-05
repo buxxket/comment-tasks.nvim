@@ -81,6 +81,34 @@ local function resolve_label_color(configured)
 	return "blue"
 end
 
+local function resolve_card_position(configured)
+	if configured == nil then
+		return nil
+	end
+
+	if type(configured) == "number" then
+		return configured
+	end
+
+	local text = trim_string(tostring(configured))
+	if not text then
+		return nil
+	end
+
+	local lowered = text:lower()
+	if lowered == "top" or lowered == "bottom" then
+		return lowered
+	end
+
+	local numeric = tonumber(text)
+	if numeric then
+		return numeric
+	end
+
+	notify_trello_warning("Invalid card_position '" .. text .. "', ignoring it")
+	return nil
+end
+
 local function parse_config_values(values)
 	if values == nil then
 		return {}
@@ -513,8 +541,9 @@ function TrelloProvider:resolve_card_defaults(api_key, api_token, callback)
 		done_if_ready()
 	end)
 
-	if self.config.card_position then
-		defaults.pos = self.config.card_position
+	local resolved_pos = resolve_card_position(self.config.card_position)
+	if resolved_pos ~= nil then
+		defaults.pos = resolved_pos
 	end
 
 	if type(self.config.default_due_in_days) == "number" and self.config.default_due_in_days > 0 then
@@ -524,6 +553,32 @@ function TrelloProvider:resolve_card_defaults(api_key, api_token, callback)
 	end
 
 	done_if_ready()
+end
+
+function TrelloProvider:enforce_card_position(card_id, pos, api_key, api_token, callback)
+	local update_params = {
+		pos = pos,
+		key = api_key,
+		token = api_token,
+	}
+
+	http.request({
+		url = "https://api.trello.com/1/cards/" .. card_id,
+		method = "put",
+		headers = {
+			["Content-Type"] = "application/x-www-form-urlencoded",
+		},
+		body = build_encoded_params(update_params),
+		callback = function(result)
+			vim.schedule(function()
+				if result.status < 200 or result.status >= 300 then
+					callback("Failed to enforce card position (status " .. tostring(result.status) .. ")")
+					return
+				end
+				callback(nil)
+			end)
+		end,
+	})
 end
 
 --- Create a new Trello card
@@ -614,7 +669,7 @@ function TrelloProvider:create_card_in_list(list_id, task_name, description, api
 		body = params_string,
 		callback = function(result)
 			vim.schedule(function()
-				if result.status ~= 200 then
+				if result.status < 200 or result.status >= 300 then
 					local error_msg = "Trello API request failed with status: " .. result.status
 					if result.body then
 						error_msg = error_msg .. " - " .. result.body
@@ -633,6 +688,22 @@ function TrelloProvider:create_card_in_list(list_id, task_name, description, api
 					local card_url = response.shortUrl
 						or response.url
 						or (response.shortLink and ("https://trello.com/c/" .. response.shortLink))
+
+					local desired_pos = nil
+					if type(card_defaults) == "table" then
+						desired_pos = card_defaults.pos
+					end
+
+					if desired_pos ~= nil then
+						self:enforce_card_position(response.id, desired_pos, api_key, api_token, function(position_err)
+							if position_err then
+								notify_trello_warning(position_err)
+							end
+							callback(card_url, nil)
+						end)
+						return
+					end
+
 					callback(card_url, nil)
 				else
 					callback(nil, "No card ID in response")
