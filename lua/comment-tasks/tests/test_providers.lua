@@ -36,7 +36,7 @@ describe("comment-tasks providers", function()
 
             local expected_providers = {
                 "clickup", "github", "todoist", "gitlab", "asana", 
-                "linear", "jira", "notion", "monday", "trello"
+                "linear", "jira", "notion", "monday", "trello", "markdown"
             }
             for _, expected in ipairs(expected_providers) do
                 local found = false
@@ -63,6 +63,12 @@ describe("comment-tasks providers", function()
                 repo_name = "test_repo"
             })
             assert.is_not_nil(github_provider)
+
+            local markdown_provider, _error3 = interface.create_provider("markdown", {
+                enabled = true,
+                file_path = "TASKS.md"
+            })
+            assert.is_not_nil(markdown_provider)
         end)
 
         it("should fail for unknown providers", function()
@@ -206,6 +212,17 @@ describe("comment-tasks providers", function()
             local enabled, _error_msg = trello_provider:is_enabled()
             assert.is_true(enabled)
         end)
+
+        it("should create Markdown provider without API credentials", function()
+            local markdown_provider, _error = interface.create_provider("markdown", {
+                enabled = true,
+                file_path = "TASKS.md"
+            })
+            assert.is_not_nil(markdown_provider)
+
+            local enabled, _error_msg = markdown_provider:is_enabled()
+            assert.is_true(enabled)
+        end)
     end)
 
     describe("provider URL pattern matching", function()
@@ -251,6 +268,11 @@ describe("comment-tasks providers", function()
                     provider = "trello",
                     url = "https://trello.com/c/abc123def",
                     should_match = true
+                },
+                {
+                    provider = "markdown",
+                    url = "markdown://task/md-20260810112233-123456",
+                    should_match = true
                 }
             }
 
@@ -267,7 +289,8 @@ describe("comment-tasks providers", function()
                     project_key = case.provider == "jira" and "TEST" or nil,
                     database_id = case.provider == "notion" and "test_db" or nil,
                     board_id = (case.provider == "monday" and "123456") or (case.provider == "trello" and "test_board") or nil,
-                    list_mapping = case.provider == "trello" and {new = "To Do"} or nil
+                    list_mapping = case.provider == "trello" and {new = "To Do"} or nil,
+                    file_path = case.provider == "markdown" and "TASKS.md" or nil
                 })
                 
                 if provider then

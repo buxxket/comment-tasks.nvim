@@ -297,6 +297,10 @@ describe("Comment Tasks Neovim Integration", function()
                 {
                     url = "https://gitlab.com/owner/project/-/issues/123",
                     provider = "gitlab"
+                },
+                {
+                    url = "markdown://task/md-20260810112233-123456",
+                    provider = "markdown"
                 }
             }
 
@@ -317,13 +321,14 @@ describe("Comment Tasks Neovim Integration", function()
             local interface = require("comment-tasks.providers.interface")
 
             -- Test all providers can be created with proper config
-            local providers = {"clickup", "github", "todoist", "gitlab"}
+            local providers = {"clickup", "github", "todoist", "gitlab", "markdown"}
             for _, provider_name in ipairs(providers) do
                 local config_map = {
                     clickup = { enabled = true, list_id = "test" },
                     github = { enabled = true, repo_owner = "test", repo_name = "repo" },
                     todoist = { enabled = true },
-                    gitlab = { enabled = true, project_id = "12345" }
+                    gitlab = { enabled = true, project_id = "12345" },
+                    markdown = { enabled = true, file_path = "TASKS.md" }
                 }
 
                 local provider, error_msg = interface.create_provider(provider_name, config_map[provider_name])
@@ -446,6 +451,7 @@ describe("Comment Tasks Neovim Integration", function()
             assert.is_not_nil(main_plugin.create_github_task_from_comment)
             assert.is_not_nil(main_plugin.create_todoist_task_from_comment)
             assert.is_not_nil(main_plugin.create_gitlab_task_from_comment)
+            assert.is_not_nil(main_plugin.create_markdown_task_from_comment)
         end)
 
         it("close_task_from_comment should call update_task_status_from_comment with completed", function()

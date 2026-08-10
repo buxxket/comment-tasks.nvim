@@ -91,6 +91,9 @@ run_specs "Provider Functionality" \
 run_specs "Trello Provider Advanced Defaults" \
     lua/comment-tasks/tests/test_trello_provider.lua
 
+run_specs "Markdown Provider" \
+    lua/comment-tasks/tests/test_markdown_provider.lua
+
 run_specs "Cross-module Integration" \
     lua/comment-tasks/tests/test_integration.lua
 

@@ -49,7 +49,13 @@ function M.run_tests(test_framework)
         {provider = "monday", status = "new", expected = "Not Started"},
         {provider = "monday", status = "completed", expected = "Done"},
         {provider = "monday", status = "review", expected = "Review"},
-        {provider = "monday", status = "in_progress", expected = "Working on it"}
+        {provider = "monday", status = "in_progress", expected = "Working on it"},
+
+        -- Markdown
+        {provider = "markdown", status = "new", expected = "open"},
+        {provider = "markdown", status = "completed", expected = "completed"},
+        {provider = "markdown", status = "review", expected = "review"},
+        {provider = "markdown", status = "in_progress", expected = "in_progress"}
     }
 
     for _, test in ipairs(basic_status_tests) do

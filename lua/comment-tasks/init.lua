@@ -18,6 +18,7 @@ require("comment-tasks.providers.jira")
 require("comment-tasks.providers.notion")
 require("comment-tasks.providers.monday")
 require("comment-tasks.providers.trello")
+require("comment-tasks.providers.markdown")
 
 -- Get a fresh provider instance from the given effective config.
 -- No caching — called per command invocation so project overrides take effect.
@@ -522,6 +523,22 @@ function M.setup(user_config)
             })
     end
 
+    -- Markdown checklist commands
+    if config.is_provider_enabled("markdown") then
+        vim.api.nvim_create_user_command(
+            "MarkdownTask",
+            utils.create_provider_command_handler("markdown",
+                function(lang_override) M.create_task_from_comment(lang_override, "markdown") end,
+                function(status, lang_override) M.update_task_status_from_comment(status, lang_override, "markdown") end,
+                function(lang_override) M.add_file_to_task_sources(lang_override, "markdown") end
+            ),
+            {
+                desc = "Markdown task operations: [<status>|addfile] [language] (statuses from config)",
+                nargs = "*",
+                complete = utils.create_provider_completion("markdown", current_config.languages)
+            })
+    end
+
 
 end
 
@@ -662,5 +679,18 @@ end
 
 function M.add_todoist_file_to_task_sources(lang_override)
     return M.add_file_to_task_sources(lang_override, "todoist")
+end
+
+-- Markdown wrapper functions
+function M.create_markdown_task_from_comment(lang_override)
+    return M.create_task_from_comment(lang_override, "markdown")
+end
+
+function M.update_markdown_task_status_from_comment(status, lang_override)
+    return M.update_task_status_from_comment(status, lang_override, "markdown")
+end
+
+function M.add_markdown_file_to_task_sources(lang_override)
+    return M.add_file_to_task_sources(lang_override, "markdown")
 end
 return M

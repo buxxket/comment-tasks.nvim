@@ -1,6 +1,6 @@
 # Comment Tasks
 
-A universal Neovim plugin that bridges **10+ task management systems** with code comments across multiple programming languages. Create, update, and manage tasks directly from your comments without leaving your editor.
+A universal Neovim plugin that bridges **11+ task management systems** with code comments across multiple programming languages. Create, update, and manage tasks directly from your comments without leaving your editor.
 
 > 📖 Rendered documentation:
 > [docs.georgeharker.com/comment-tasks.nvim](https://docs.georgeharker.com/comment-tasks.nvim/)
@@ -11,7 +11,7 @@ A universal Neovim plugin that bridges **10+ task management systems** with code
 
 Transform your TODO comments into actionable tasks across 10+ platforms while keeping task URLs embedded in your codebase for perfect traceability.
 
-- **🔗 Universal Multi-Provider Support**: Works with 10+ task management systems
+- **🔗 Universal Multi-Provider Support**: Works with 11+ task management systems
 - **🎯 Custom Status System**: Configurable workflows for each provider
 - **🌍 Multi-Language Support**: Works with 15+ programming languages using Tree-sitter
 - **✨ Smart Comment Detection**: Handles single-line, block comments, and docstrings
@@ -32,6 +32,7 @@ Transform your TODO comments into actionable tasks across 10+ platforms while ke
 | **🏢 [Jira](docs/providers/jira.md)** | Full | ✅ | ❌ | ✅ |
 | **📝 [Notion](docs/providers/notion.md)** | Full | ✅ | ❌ | ✅ |
 | **📈 [Monday.com](docs/providers/monday.md)** | Full | ✅ | ❌ | ✅ |
+| **🗂️ [Markdown Checklist](docs/providers/markdown.md)** | Local | ✅ | ❌ | ✅ |
 | **🐙 [GitHub Issues](docs/providers/github.md)** | Basic | ❌ | ❌ | ✅ |
 | **🦊 [GitLab Issues](docs/providers/gitlab.md)** | Basic | ❌ | ❌ | ✅ |
 | **📦 [Trello](docs/providers/trello.md)** | Basic | ❌ | ❌ | ✅ |
@@ -245,6 +246,7 @@ require("comment-tasks").setup({
 - 🏢 **[Jira Setup](docs/providers/jira.md)**
 - 📝 **[Notion Setup](docs/providers/notion.md)**
 - 📈 **[Monday.com Setup](docs/providers/monday.md)**
+- 🗂️ **[Markdown Checklist Setup](docs/providers/markdown.md)**
 - 📦 **[Trello Setup](docs/providers/trello.md)**
 - 🦊 **[GitLab Issues Setup](docs/providers/gitlab.md)**
 - ✅ **[Todoist Setup](docs/providers/todoist.md)**

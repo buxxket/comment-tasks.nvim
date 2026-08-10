@@ -105,6 +105,9 @@ export GITLAB_TOKEN="your_personal_access_token"
 
 # Todoist
 export TODOIST_API_TOKEN="your_api_token"
+
+# Markdown provider
+# No environment variable required (stores tasks in a local markdown file)
 ```
 
 ## Verification
@@ -129,6 +132,6 @@ After installation, verify everything works:
 ## Next Steps
 
 - **Configuration**: See [configuration.md](configuration.md) for detailed setup options
-- **Provider Setup**: See the provider guides for specific provider configuration, e.g. [ClickUp](providers/clickup.md), [GitHub](providers/github.md), [Jira](providers/jira.md)
+- **Provider Setup**: See the provider guides for specific provider configuration, e.g. [ClickUp](providers/clickup.md), [GitHub](providers/github.md), [Jira](providers/jira.md), [Markdown Checklist](providers/markdown.md)
 - **Keybindings**: Check [api-reference.md](api-reference.md) for keybinding examples
 - **Quick Start**: Return to main [README.md](../README.md#-quick-start) for usage examples

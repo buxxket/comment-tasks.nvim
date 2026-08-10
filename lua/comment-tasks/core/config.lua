@@ -152,6 +152,18 @@ M.default_config = {
             },
             enabled = false,
         },
+        markdown = {
+            enabled = false,
+            file_path = "TASKS.md", -- Relative paths resolve from project root
+            section_heading = "## Comment Tasks",
+            statuses = {
+                new = "open", -- Special: creates checklist items
+                completed = "completed", -- Special: marks checklist items as done
+                in_progress = "in_progress", -- Regular status update (keeps unchecked)
+                review = "review", -- Regular status update (keeps unchecked)
+                blocked = "blocked" -- Regular status update (keeps unchecked)
+            },
+        },
     },
 
     comment_prefixes = {
@@ -688,6 +700,7 @@ local PROJECT_OVERRIDE_FIELDS = {
     notion  = { "database_id" },
     trello  = { "board_id", "statuses" },
     monday  = { "board_id", "statuses" },
+    markdown = { "file_path", "section_heading", "statuses" },
 }
 
 --- Apply project-file overrides onto an already-deep-copied config table.

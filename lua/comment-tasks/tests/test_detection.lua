@@ -25,11 +25,13 @@ describe("comment-tasks detection", function()
             local github_url = "https://github.com/owner/repo/issues/123"
             local todoist_url = "https://todoist.com/showTask?id=123456789"
             local gitlab_url = "https://gitlab.com/owner/project/-/issues/123"
+            local markdown_url = "markdown://task/md-20260810112233-123456"
 
             assert.equals("clickup", utils.get_provider_from_url(clickup_url))
             assert.equals("github", utils.get_provider_from_url(github_url))
             assert.equals("todoist", utils.get_provider_from_url(todoist_url))
             assert.equals("gitlab", utils.get_provider_from_url(gitlab_url))
+            assert.equals("markdown", utils.get_provider_from_url(markdown_url))
         end)
 
         it("should extract provider-specific URLs", function()
@@ -37,11 +39,13 @@ describe("comment-tasks detection", function()
             local github_url = "https://github.com/owner/repo/issues/123"
             local todoist_url = "https://todoist.com/showTask?id=123456789"
             local gitlab_url = "https://gitlab.com/owner/project/-/issues/123"
+            local markdown_url = "markdown://task/md-20260810112233-123456"
 
             assert.equals(clickup_url, utils.extract_clickup_url(clickup_url))
             assert.equals(github_url, utils.extract_github_url(github_url))
             assert.equals(todoist_url, utils.extract_todoist_url(todoist_url))
             assert.equals(gitlab_url, utils.extract_gitlab_url(gitlab_url))
+            assert.equals(markdown_url, utils.extract_markdown_url(markdown_url))
         end)
 
         it("should extract generic task URLs", function()
@@ -49,11 +53,13 @@ describe("comment-tasks detection", function()
             local github_url = "https://github.com/owner/repo/issues/123"
             local todoist_url = "https://todoist.com/showTask?id=123456789"
             local gitlab_url = "https://gitlab.com/owner/project/-/issues/123"
+            local markdown_url = "markdown://task/md-20260810112233-123456"
 
             assert.equals(clickup_url, utils.extract_task_url(clickup_url))
             assert.equals(github_url, utils.extract_task_url(github_url))
             assert.equals(todoist_url, utils.extract_task_url(todoist_url))
             assert.equals(gitlab_url, utils.extract_task_url(gitlab_url))
+            assert.equals(markdown_url, utils.extract_task_url(markdown_url))
         end)
     end)
 

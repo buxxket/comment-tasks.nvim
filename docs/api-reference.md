@@ -148,6 +148,10 @@ require("comment-tasks").update_task_status_from_comment("Done", nil, "linear")
 -- Todoist
 require("comment-tasks").create_task_from_comment(nil, "todoist")
 require("comment-tasks").update_task_status_from_comment("completed", nil, "todoist")
+
+-- Markdown checklist (local file)
+require("comment-tasks").create_task_from_comment(nil, "markdown")
+require("comment-tasks").update_task_status_from_comment("completed", nil, "markdown")
 ```
 
 ## Common Usage Patterns
@@ -228,6 +232,10 @@ Each provider has different status values. See individual provider documentation
 
 ### Linear
 - Configurable in setup (defaults: `"new"`, `"completed"`, `"review"`, `"in_progress"`, `"backlog"`)
+
+### Markdown Checklist
+- Local checklist backend (no remote API token required)
+- Common: `"new"`, `"completed"`, `"in_progress"`, `"review"`, `"blocked"`
 
 See [Provider Documentation](../README.md#provider-guides) for complete provider-specific status lists.
 

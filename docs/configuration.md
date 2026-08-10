@@ -20,6 +20,7 @@ require("comment-tasks").setup({
         clickup = { /* ClickUp config */ },
         github = { /* GitHub config */ },
         asana = { /* Asana config */ },
+        markdown = { /* Local markdown checklist config */ },
         -- ... other providers
     }
 })
@@ -258,6 +259,33 @@ todoist = {
 }
 ```
 
+#### Markdown Checklist
+
+```lua
+markdown = {
+    enabled = true,
+    file_path = "TASKS.md",                     -- Relative to detected project root
+    section_heading = "## Comment Tasks",       -- Section where checklist items are appended
+
+    statuses = {
+        new = "open",
+        completed = "completed",
+        in_progress = "in_progress",
+        review = "review",
+        blocked = "blocked",
+    },
+}
+```
+
+The Markdown provider stores tasks locally as checklist items:
+
+```markdown
+## Comment Tasks
+
+- [ ] [md-20260810112233-123456](markdown://task/md-20260810112233-123456) Implement user auth
+  - files: auth.lua
+```
+
 ## Language Configuration
 
 ### Supported Languages
@@ -343,6 +371,9 @@ export TRELLO_API_TOKEN="your_token"
 
 # Todoist
 export TODOIST_API_TOKEN="your_api_token"
+
+# Markdown provider
+# No environment variable needed (local file only)
 ```
 
 ### Environment Variable Customization

@@ -47,6 +47,7 @@ website:
           - docs/providers/gitlab.md
           - docs/providers/jira.md
           - docs/providers/linear.md
+          - docs/providers/markdown.md
           - docs/providers/monday.md
           - docs/providers/notion.md
           - docs/providers/todoist.md

@@ -5,7 +5,7 @@ local comment_tasks = require("comment-tasks")
 
 comment_tasks.setup({
     -- Default provider to use when no specific provider is mentioned
-    default_provider = "clickup", -- Options: "clickup", "github", "todoist"
+    default_provider = "clickup", -- Options: "clickup", "github", "todoist", "markdown"
 
     -- Provider configurations
     providers = {
@@ -103,6 +103,19 @@ comment_tasks.setup({
                 completed = "Done",
             },
         },
+
+        markdown = {
+            enabled = false,
+            file_path = "TASKS.md",
+            section_heading = "## Comment Tasks",
+            statuses = {
+                new = "open",
+                completed = "completed",
+                in_progress = "in_progress",
+                review = "review",
+                blocked = "blocked",
+            },
+        },
     },
 
     -- Comment prefixes to recognize (applies to all providers)
@@ -165,6 +178,10 @@ vim.keymap.set("n", "<leader>tcl", function()
     require("comment-tasks").create_task_from_comment(nil, "gitlab")
 end, { desc = "Create GitLab issue" })
 
+vim.keymap.set("n", "<leader>tcm", function()
+    require("comment-tasks").create_task_from_comment(nil, "markdown")
+end, { desc = "Create Markdown checklist task" })
+
 vim.keymap.set("n", "<leader>tf", function()
     require("comment-tasks").add_file_to_task_sources()
 end, { desc = "Add file to task" })
@@ -174,7 +191,7 @@ Environment Variables Setup:
 
 Features:
 
-✓ Multi-provider support (ClickUp, GitHub, Todoist, GitLab, Linear, ...)
+✓ Multi-provider support (ClickUp, GitHub, Todoist, GitLab, Linear, Markdown, ...)
 ✓ Enhanced vim.notify integration with provider-specific titles
 ✓ Tree-sitter based comment detection with regex fallback
 ✓ Smart URL detection and task management across providers

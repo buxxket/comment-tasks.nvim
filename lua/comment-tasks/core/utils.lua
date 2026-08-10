@@ -63,6 +63,10 @@ function M.extract_trello_url(line)
     return line:match("(https://trello%.com/c/[a-zA-Z0-9]+[^%s]*)")
 end
 
+function M.extract_markdown_url(line)
+    return line:match("(markdown://task/[%w%-%._]+)")
+end
+
 function M.extract_task_url(line)
     return M.extract_clickup_url(line) or
            M.extract_github_url(line) or
@@ -73,7 +77,8 @@ function M.extract_task_url(line)
            M.extract_jira_url(line) or
            M.extract_notion_url(line) or
            M.extract_monday_url(line) or
-           M.extract_trello_url(line)
+           M.extract_trello_url(line) or
+           M.extract_markdown_url(line)
 end
 
 -- Function to get provider name from URL
@@ -90,6 +95,8 @@ function M.get_provider_from_url(url)
         return "todoist"
     elseif url:match("https://gitlab%.com/") then
         return "gitlab"
+    elseif url:match("markdown://task/") then
+        return "markdown"
     end
 
     return nil

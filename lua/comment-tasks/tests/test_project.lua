@@ -228,8 +228,9 @@ describe("comment-tasks project root detection", function()
                     asana    = { project_gid = "gid1", assignee_gid = "gid2" },
                     todoist  = { project_id = "tod1" },
                     notion   = { database_id = "db1" },
-                    trello   = { list_id = "tr1" },
+                    trello   = { board_id = "tr1" },
                     monday   = { board_id = "mon1" },
+                    markdown = { file_path = "TASKS.md", section_heading = "## Work Backlog" },
                 }
             })
             vim.fn.writefile({content}, tmp .. "/.comment-tasks.json")
@@ -301,8 +302,9 @@ describe("comment-tasks project root detection", function()
                     asana   = { "project_gid", "assignee_gid" },
                     todoist = { "project_id" },
                     notion  = { "database_id" },
-                    trello  = { "list_id" },
+                    trello  = { "board_id" },
                     monday  = { "board_id" },
+                    markdown = { "file_path", "section_heading", "statuses" },
                 }
                 local overrides = project_cfg.providers or {}
                 for pname, values in pairs(overrides) do

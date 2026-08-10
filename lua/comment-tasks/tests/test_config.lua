@@ -29,6 +29,7 @@ describe("comment-tasks configuration", function()
             assert.is_not_nil(default_config.providers.github)
             assert.is_not_nil(default_config.providers.todoist)
             assert.is_not_nil(default_config.providers.gitlab)
+            assert.is_not_nil(default_config.providers.markdown)
         end)
     end)
 
