@@ -13,7 +13,7 @@ Transform your TODO comments into actionable tasks across 10+ platforms while ke
 
 - **🔗 Universal Multi-Provider Support**: Works with 11+ task management systems
 - **🎯 Custom Status System**: Configurable workflows for each provider
-- **🌍 Multi-Language Support**: Works with 15+ programming languages using Tree-sitter
+- **🌍 Multi-Language Support**: Works with 16+ programming languages using Tree-sitter
 - **✨ Smart Comment Detection**: Handles single-line, block comments, and docstrings
 - **🔄 Intelligent URL Insertion**: Context-aware URL placement
 - **⚡ Unified Command Interface**: Same commands work across all providers
@@ -43,8 +43,8 @@ Transform your TODO comments into actionable tasks across 10+ platforms while ke
 
 ## 🌍 Supported Languages
 
-Works with 15+ programming languages including:
-**Python** • **JavaScript/TypeScript** • **Lua** • **Rust** • **C/C++** • **C#** • **Go** • **Java** • **Ruby** • **PHP** • **CSS** • **HTML** • **Bash** • **Vim Script** • **YAML** • **JSON**
+Works with 16+ programming languages including:
+**Python** • **JavaScript/TypeScript** • **Lua** • **Rust** • **C/C++** • **C#** • **Go** • **Java** • **Ruby** • **PHP** • **CSS** • **HTML** • **Bash** • **Vim Script** • **YAML** • **JSON** • **Markdown**
 
 ## 📦 Installation
 

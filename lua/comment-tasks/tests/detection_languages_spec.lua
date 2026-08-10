@@ -552,4 +552,28 @@ describe("language-specific comment detection", function()
             cleanup()
         end)
     end)
+
+    describe("markdown checkbox todos", function()
+        it("should detect markdown task list items", function()
+            local cleanup = create_mock_buffer({
+                "- [ ] Create Trello cards from markdown todos",
+                "- [ ] Keep each todo isolated to one selected line",
+                "Some regular paragraph text"
+            }, {1, 0}, "markdown")
+
+            local comment_info = detection.get_comment_info_regex("markdown", languages_config)
+            assert.is_not_nil(comment_info)
+            if comment_info then
+                assert.equals("markdown", comment_info.lang)
+                assert.is_true(comment_info.is_comment)
+                assert.equals(1, comment_info.start_line)
+                assert.equals(1, comment_info.end_line)
+
+                local content = detection.extract_comment_content(comment_info, config.default_config.comment_prefixes)
+                assert.matches("Create Trello cards from markdown todos", content)
+            end
+
+            cleanup()
+        end)
+    end)
 end)

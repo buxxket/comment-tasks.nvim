@@ -140,6 +140,32 @@ trello = {
    :TrelloTask addfile      " Appends current file to the card description
    ```
 
+### Markdown Checklist Workflow
+
+You can also create Trello cards directly from markdown task lists.
+
+In a `.md` file:
+
+```markdown
+- [ ] Improve onboarding checklist copy
+- [ ] Add screenshots for setup flow
+```
+
+Place your cursor on one checklist line and run:
+
+```vim
+:TrelloTask new
+```
+
+The selected markdown todo is used as the card title, and the task URL is
+inserted under that specific item:
+
+```markdown
+- [ ] Improve onboarding checklist copy
+    - https://trello.com/c/abc123def
+- [ ] Add screenshots for setup flow
+```
+
 ## Configuration Options
 
 ### Basic Configuration

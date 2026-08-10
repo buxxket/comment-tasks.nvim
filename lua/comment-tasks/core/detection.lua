@@ -160,6 +160,19 @@ function M.get_comment_info_treesitter(lang_override, languages_config)
     local style_config = lang_config.comment_styles[style_type]
 
     if style_config and style_config.prefix and not style_config.start_markers then
+        if style_config.group_consecutive == false then
+            return {
+                node = comment_node,
+                start_line = start_row + 1,
+                end_line = end_row + 1,
+                lines = lines,
+                style_type = style_type,
+                lang_config = lang_config,
+                is_comment = true,
+                lang = lang,
+            }
+        end
+
         -- This is a single-line comment, check for consecutive lines
         local buf_lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
         local prefix_pattern = "^%s*" .. vim.pesc(style_config.prefix)
@@ -266,21 +279,23 @@ function M.get_comment_info_regex(lang_override, languages_config)
             if current_line:match(prefix_pattern) then
                 style_type = style_name
 
-                -- Find start of consecutive comments
-                for i = line_num - 1, 1, -1 do
-                    if buf_lines[i] and buf_lines[i]:match(prefix_pattern) then
-                        block_start = i
-                    else
-                        break
+                if style_config.group_consecutive ~= false then
+                    -- Find start of consecutive comments
+                    for i = line_num - 1, 1, -1 do
+                        if buf_lines[i] and buf_lines[i]:match(prefix_pattern) then
+                            block_start = i
+                        else
+                            break
+                        end
                     end
-                end
 
-                -- Find end of consecutive comments
-                for i = line_num + 1, #buf_lines do
-                    if buf_lines[i] and buf_lines[i]:match(prefix_pattern) then
-                        block_end = i
-                    else
-                        break
+                    -- Find end of consecutive comments
+                    for i = line_num + 1, #buf_lines do
+                        if buf_lines[i] and buf_lines[i]:match(prefix_pattern) then
+                            block_end = i
+                        else
+                            break
+                        end
                     end
                 end
 

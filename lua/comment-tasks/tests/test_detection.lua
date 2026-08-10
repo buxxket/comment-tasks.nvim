@@ -110,7 +110,7 @@ describe("comment-tasks detection", function()
 
             local expected_languages = {
                 "lua", "python", "javascript", "typescript", "rust",
-                "c", "cpp", "go", "java", "ruby", "php"
+                "c", "cpp", "go", "java", "ruby", "php", "markdown"
             }
 
             for _, lang in ipairs(expected_languages) do
@@ -118,6 +118,50 @@ describe("comment-tasks detection", function()
                 assert.is_not_nil(languages[lang].comment_nodes)
                 assert.is_not_nil(languages[lang].comment_styles)
             end
+        end)
+
+        it("should treat markdown checkbox todos as single items", function()
+            local cfg = config.default_config
+
+            local original_bo = vim.bo
+            local original_api = vim.api
+
+            local mock_lines = {
+                "- [ ] First todo",
+                "- [ ] Second todo",
+                "- [ ] Third todo",
+            }
+
+            vim.bo = vim.tbl_extend("force", vim.bo or {}, { filetype = "markdown" })
+            vim.api = vim.tbl_extend("force", vim.api or {}, {
+                nvim_win_get_cursor = function()
+                    return {2, 0}
+                end,
+                nvim_buf_get_lines = function(_, start_idx, end_idx, _)
+                    local result = {}
+                    local start_line = start_idx + 1
+                    local end_line = end_idx
+                    if end_idx == -1 then
+                        end_line = #mock_lines
+                    end
+                    for i = start_line, end_line do
+                        if mock_lines[i] then
+                            table.insert(result, mock_lines[i])
+                        end
+                    end
+                    return result
+                end,
+            })
+
+            local info = detection.get_comment_info_regex("markdown", cfg.languages)
+            assert.is_not_nil(info)
+            assert.equals(2, info.start_line)
+            assert.equals(2, info.end_line)
+            assert.equals(1, #info.lines)
+            assert.equals("- [ ] Second todo", info.lines[1])
+
+            vim.bo = original_bo
+            vim.api = original_api
         end)
     end)
 end)

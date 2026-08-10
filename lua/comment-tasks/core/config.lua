@@ -402,6 +402,30 @@ M.default_config = {
             },
         },
 
+        markdown = {
+            -- Markdown todos are treated like pseudo-comment lines.
+            -- Tree-sitter coverage for task items varies, so regex fallback is
+            -- the primary path for this language.
+            comment_nodes = { "list_item", "task_list_marker", "paragraph" },
+            comment_styles = {
+                task_open = {
+                    prefix = "- [ ] ",
+                    continue_with = "  - ",
+                    group_consecutive = false,
+                },
+                task_done = {
+                    prefix = "- [x] ",
+                    continue_with = "  - ",
+                    group_consecutive = false,
+                },
+                task_done_upper = {
+                    prefix = "- [X] ",
+                    continue_with = "  - ",
+                    group_consecutive = false,
+                },
+            },
+        },
+
         json = {
             comment_nodes = { "comment", "Comment", "line_comment", "block_comment" },
             comment_styles = {
