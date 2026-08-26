@@ -619,7 +619,7 @@ function TrelloProvider:create_task(task_name, filename, callback, options)
 	end
 
 	-- Prepare card description
-	local description = "Created from Neovim comment"
+	local description = ""
 
 	if options and type(options) == "table" and type(options.comment_details) == "table" then
 		local detail_lines = {}
