@@ -1,0 +1,43 @@
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "37 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  rebase:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Rebase onto upstream
+        run: |
+          set -euo pipefail
+          before="$(git rev-parse HEAD)"
+          git remote add upstream https://github.com/georgeharker/comment-tasks.nvim.git
+          git fetch upstream main
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "Already up to date with upstream."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git rebase upstream/main; then
+            git rebase --abort || true
+            echo "::error::Rebase conflict. Resolve locally in the fork and push."
+            exit 1
+          fi
+          git push --force-with-lease=main:"$before" origin HEAD:main
